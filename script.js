@@ -331,6 +331,38 @@ function carregarAba(aba) {
                 carregarAba('combate');
             });
         }
+        
+        // Listeners para CA, Iniciativa e Deslocamento
+        const caInput = document.getElementById('caInput');
+        if (caInput) {
+            caInput.addEventListener('change', (e) => {
+                let val = parseInt(e.target.value);
+                if (isNaN(val)) val = 10;
+                fichaKael.combate.ca = val;
+                localStorage.setItem('fichaKael', JSON.stringify(fichaKael));
+            });
+        }
+        
+        const iniciatvaInput = document.getElementById('iniciatvaInput');
+        if (iniciatvaInput) {
+            iniciatvaInput.addEventListener('change', (e) => {
+                let val = parseInt(e.target.value);
+                if (isNaN(val)) val = 0;
+                fichaKael.combate.iniciativa = val;
+                localStorage.setItem('fichaKael', JSON.stringify(fichaKael));
+            });
+        }
+        
+        const deslocInput = document.getElementById('deslocInput');
+        if (deslocInput) {
+            deslocInput.addEventListener('change', (e) => {
+                let val = parseInt(e.target.value);
+                if (isNaN(val) || val < 0) val = 9;
+                fichaKael.combate.deslocamento = val;
+                localStorage.setItem('fichaKael', JSON.stringify(fichaKael));
+            });
+        }
+        
         // Event listeners para ataques
         document.querySelectorAll('.ataque-input').forEach(input => {
             input.addEventListener('change', () => {
@@ -364,12 +396,32 @@ function carregarAba(aba) {
                 carregarAba('magias');
             });
         });
+        
         // Botão para adicionar magia
         const btnAddMagia = document.getElementById('btn-add-magia');
         if (btnAddMagia) {
             btnAddMagia.addEventListener('click', () => {
-                fichaKael.magias.lista.push({ nivel: 1, nome: 'Nova Magia', desc: 'Digite a descrição da magia aqui...' });
+                const nomeMagia = document.getElementById('novamagiaInput')?.value.trim();
+                const circulo = document.getElementById('novamagiaCirculo')?.value;
+                const descMagia = document.getElementById('novamagiaDesc')?.value.trim();
+                
+                if (!nomeMagia || !circulo) {
+                    alert('Preencha o nome da magia e selecione o círculo!');
+                    return;
+                }
+                
+                fichaKael.magias.lista.push({ 
+                    nivel: parseInt(circulo), 
+                    nome: nomeMagia, 
+                    desc: descMagia || 'Digite a descrição da magia aqui...' 
+                });
                 localStorage.setItem('fichaKael', JSON.stringify(fichaKael));
+                
+                // Limpa os campos
+                document.getElementById('novamagiaInput').value = '';
+                document.getElementById('novamagiaCirculo').value = '';
+                document.getElementById('novamagiaDesc').value = '';
+                
                 carregarAba('magias');
             });
         }
@@ -523,15 +575,16 @@ function renderCombate() {
                 <div class="grid grid-cols-3 gap-4 mb-6">
                     <div class="arcane-box p-4 text-center">
                         <div class="text-gray-400 text-sm font-bold mb-2">CA</div>
-                        <div class="text-2xl font-bold text-amber-400">${c.ca}</div>
+                        <input type="number" id="caInput" min="0" max="30" value="${c.ca}" class="w-full text-center text-2xl font-bold text-amber-400 bg-dark-700 rounded px-2 py-1 focus:outline-none border border-amber-400/50 focus:border-amber-400" />
                     </div>
                     <div class="arcane-box p-4 text-center">
                         <div class="text-gray-400 text-sm font-bold mb-2">INICIATIVA</div>
-                        <div class="text-2xl font-bold text-cyan-400">${c.iniciativa >= 0 ? '+' : ''}${c.iniciativa}</div>
+                        <input type="number" id="iniciatvaInput" value="${c.iniciativa}" class="w-full text-center text-2xl font-bold text-cyan-400 bg-dark-700 rounded px-2 py-1 focus:outline-none border border-cyan-400/50 focus:border-cyan-400" />
                     </div>
                     <div class="arcane-box p-4 text-center">
                         <div class="text-gray-400 text-sm font-bold mb-2">DESLOC.</div>
-                        <div class="text-2xl font-bold text-violet-400">${c.deslocamento}m</div>
+                        <input type="number" id="deslocInput" min="0" max="60" value="${c.deslocamento}" class="w-full text-center text-2xl font-bold text-violet-400 bg-dark-700 rounded px-2 py-1 focus:outline-none border border-violet-400/50 focus:border-violet-400" />
+                        <div class="text-gray-400 text-xs">metros</div>
                     </div>
                 </div>
                 
@@ -733,9 +786,8 @@ function renderMagias() {
     const niveis = [...new Set(fichaKael.magias.lista.map(m => m.nivel))].sort((a, b) => a - b);
     let html = `
         <div class="p-4 space-y-6">
-            <div class="flex justify-between items-center">
+            <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-bold text-secondary-500">📖 Espaços de Magia (Slots)</h2>
-                <button id="btn-add-magia" class="bg-secondary-500/30 hover:bg-secondary-500/50 text-secondary-400 px-4 py-2 rounded text-sm font-bold transition">+ Adicionar Magia</button>
             </div>
             <div class="grid grid-cols-3 gap-2 mb-6">
                 ${[1, 2, 3].map(nvl => `
@@ -746,9 +798,31 @@ function renderMagias() {
                 `).join('')}
             </div>
 
+            <div class="arcane-box p-6 border-2 border-secondary-500/30">
+                <h3 class="text-lg font-bold text-secondary-500 mb-4">➕ Adicionar Magia</h3>
+                <div class="grid grid-cols-3 gap-3 mb-4">
+                    <input type="text" id="novamagiaInput" placeholder="Nome da magia" class="bg-dark-700 rounded px-3 py-2 text-gray-100 focus:outline-none border border-dark-600 focus:border-secondary-400" />
+                    <select id="novamagiaCirculo" class="bg-dark-700 rounded px-3 py-2 text-gray-100 focus:outline-none border border-dark-600 focus:border-secondary-400">
+                        <option value="">Selecione o círculo</option>
+                        <option value="0">⭐ Truque (0)</option>
+                        <option value="1">🔮 Círculo 1</option>
+                        <option value="2">🔮 Círculo 2</option>
+                        <option value="3">🔮 Círculo 3</option>
+                        <option value="4">🔮 Círculo 4</option>
+                        <option value="5">🔮 Círculo 5</option>
+                        <option value="6">🔮 Círculo 6</option>
+                        <option value="7">🔮 Círculo 7</option>
+                        <option value="8">🔮 Círculo 8</option>
+                        <option value="9">🔮 Círculo 9</option>
+                    </select>
+                    <button id="btn-add-magia" class="bg-secondary-500/30 hover:bg-secondary-500/50 text-secondary-400 px-4 py-2 rounded font-bold transition">+ Adicionar</button>
+                </div>
+                <textarea id="novamagiaDesc" placeholder="Descrição da magia..." class="w-full bg-dark-700 rounded px-3 py-2 text-gray-100 focus:outline-none border border-dark-600 focus:border-secondary-400 min-h-20"></textarea>
+            </div>
+
             <h2 class="text-xl font-bold text-secondary-500">🪄 Grimório Conhecido</h2>
             <div class="space-y-4 max-h-96 overflow-y-auto">
-                ${niveis.map(nvl => {
+                ${niveis.length > 0 ? niveis.map(nvl => {
                     const magias = fichaKael.magias.lista.filter(m => m.nivel === nvl);
                     return `
                     <div class="border-l-2 border-secondary-500 pl-4">
@@ -763,7 +837,7 @@ function renderMagias() {
                         </div>
                     </div>
                     `;
-                }).join('')}
+                }).join('') : '<div class="text-gray-500 italic text-sm">Nenhuma magia adicionada ainda.</div>'}
             </div>
         </div>`;
     return html;
