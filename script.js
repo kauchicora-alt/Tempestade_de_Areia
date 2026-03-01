@@ -198,6 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupPWA();
     carregarFicha();
     configurarAbas();
+    initModal();
 });
 
 function carregarFicha() {
@@ -831,7 +832,10 @@ function renderMagias() {
                             ${magias.length > 0 ? magias.map((m, idx) => `
                                 <div class="arcane-box p-3">
                                     <input type="text" value="${m.nome}" data-idx="${fichaKael.magias.lista.indexOf(m)}" data-campo="nome" class="magia-input font-bold text-gray-100 bg-transparent border-b-2 border-secondary-500 pb-1 w-full focus:outline-none text-sm" />
-                                    <textarea class="magia-input w-full bg-dark-700 rounded px-2 py-1 text-xs text-gray-300 mt-2 focus:outline-none border border-dark-600 focus:border-secondary-400 min-h-16" data-idx="${fichaKael.magias.lista.indexOf(m)}" data-campo="desc">${m.desc}</textarea>
+                                    <textarea class="magia-input magia w-full bg-dark-700 rounded px-2 py-1 text-xs text-gray-300 mt-2 focus:outline-none border border-dark-600 focus:border-secondary-400 min-h-16" data-idx="${fichaKael.magias.lista.indexOf(m)}" data-campo="desc" data-description="${m.desc.replace(/\"/g, '&quot;').replace(/'/g, '&#39;') }" data-title="${m.nome}">${m.desc}</textarea>
+                                    <div class="mt-2 flex justify-end">
+                                        <button type="button" class="ver-desc-btn bg-secondary-500/20 hover:bg-secondary-500/40 text-secondary-300 text-sm px-3 py-1 rounded" data-description="${m.desc.replace(/\"/g, '&quot;').replace(/'/g, '&#39;')}" data-title="${m.nome}">Ver descrição</button>
+                                    </div>
                                 </div>
                             `).join('') : '<div class="text-gray-500 italic text-sm">Nenhuma magia conhecida neste círculo.</div>'}
                         </div>
@@ -849,3 +853,85 @@ function renderHistoria() {
         <textarea id="historiaInput" rows="12" class="w-full bg-dark-700 rounded px-3 py-2 text-gray-100 focus:outline-none" placeholder="Digite a história do personagem aqui...">${fichaKael.historia}</textarea>
     </div>`;
 }
+
+// =============================
+// Modal simples para descrições
+// =============================
+let _modalKeydownHandler = null;
+
+function initModal() {
+    const backdrop = document.getElementById('modal-backdrop');
+    const closeBtn = document.getElementById('modal-close');
+    if (!backdrop) return;
+
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+
+    // Fecha ao clicar fora da caixa (no backdrop)
+    backdrop.addEventListener('click', (e) => {
+        if (e.target === backdrop) closeModal();
+    });
+
+    // Delegação: abre modal ao clicar em um elemento .magia ou com atributo data-description
+    document.addEventListener('click', (e) => {
+        const el = e.target.closest('.magia, [data-description]');
+        if (!el) return;
+
+        // Se o alvo é um input/textarea e o elemento clicado NÃO é o próprio elemento com data-description, ignore (preserva edição)
+        if ((e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && !el.matches('input,textarea')) return;
+
+        const description = el.dataset.description || el.getAttribute('data-description') || el.getAttribute('title') || el.textContent || '';
+        const title = el.dataset.title || el.getAttribute('data-title') || el.getAttribute('aria-label') || '';
+
+        openModal({ title: title, description: description.trim() });
+    });
+}
+
+function openModal({ title = '', description = '' } = {}) {
+    const backdrop = document.getElementById('modal-backdrop');
+    const modalTitle = document.getElementById('modal-title');
+    const modalContent = document.getElementById('modal-content');
+    if (!backdrop || !modalContent) return;
+
+    modalTitle.textContent = title || 'Descrição';
+    // Insere conteúdo com escape básico para evitar injeção
+    const safeDesc = description ? escapeHtml(description).replace(/\n/g, '<br>') : '<span class="text-gray-400">Sem descrição disponível.</span>';
+    modalContent.innerHTML = `
+        <div class="modal-photo-card">
+            <div class="modal-photo-body">${safeDesc}</div>
+            <div class="modal-actions" style="margin-top:12px; display:flex; gap:8px; justify-content:flex-end;">
+                <button id="modal-back-btn" class="modal-back-btn bg-dark-700 text-secondary-400 px-3 py-2 rounded">Voltar</button>
+            </div>
+        </div>
+    `;
+
+    // Botão Voltar dentro do modal
+    const backBtn = document.getElementById('modal-back-btn');
+    if (backBtn) backBtn.addEventListener('click', closeModal);
+
+    backdrop.classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    _modalKeydownHandler = function (ev) {
+        if (ev.key === 'Escape') closeModal();
+    };
+    document.addEventListener('keydown', _modalKeydownHandler);
+}
+
+function closeModal() {
+    const backdrop = document.getElementById('modal-backdrop');
+    if (!backdrop) return;
+    backdrop.classList.remove('open');
+    document.body.style.overflow = '';
+    if (_modalKeydownHandler) {
+        document.removeEventListener('keydown', _modalKeydownHandler);
+        _modalKeydownHandler = null;
+    }
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>"']/g, function (s) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[s];
+    });
+}
+
