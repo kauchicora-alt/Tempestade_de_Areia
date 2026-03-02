@@ -398,6 +398,33 @@ function carregarAba(aba) {
             });
         });
         
+        // Botão para ver descrição das magias
+        document.querySelectorAll('.ver-desc-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const description = btn.getAttribute('data-description') || '';
+                const title = btn.getAttribute('data-title') || 'Descrição';
+                openModal({ title: title, description: description });
+            });
+        });
+        
+        // Botão para deletar magia
+        document.querySelectorAll('.deletar-magia').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const idx = parseInt(btn.getAttribute('data-idx'));
+                const nomeMagia = fichaKael.magias.lista[idx]?.nome || 'Magia';
+                
+                if (confirm(`Tem certeza que deseja deletar a magia "${nomeMagia}"?`)) {
+                    fichaKael.magias.lista.splice(idx, 1);
+                    localStorage.setItem('fichaKael', JSON.stringify(fichaKael));
+                    carregarAba('magias');
+                }
+            });
+        });
+        
         // Botão para adicionar magia
         const btnAddMagia = document.getElementById('btn-add-magia');
         if (btnAddMagia) {
@@ -822,7 +849,7 @@ function renderMagias() {
             </div>
 
             <h2 class="text-xl font-bold text-secondary-500">🪄 Grimório Conhecido</h2>
-            <div class="space-y-4 max-h-96 overflow-y-auto">
+            <div class="space-y-4">
                 ${niveis.length > 0 ? niveis.map(nvl => {
                     const magias = fichaKael.magias.lista.filter(m => m.nivel === nvl);
                     return `
@@ -833,8 +860,9 @@ function renderMagias() {
                                 <div class="arcane-box p-3">
                                     <input type="text" value="${m.nome}" data-idx="${fichaKael.magias.lista.indexOf(m)}" data-campo="nome" class="magia-input font-bold text-gray-100 bg-transparent border-b-2 border-secondary-500 pb-1 w-full focus:outline-none text-sm" />
                                     <textarea class="magia-input magia w-full bg-dark-700 rounded px-2 py-1 text-xs text-gray-300 mt-2 focus:outline-none border border-dark-600 focus:border-secondary-400 min-h-16" data-idx="${fichaKael.magias.lista.indexOf(m)}" data-campo="desc" data-description="${m.desc.replace(/\"/g, '&quot;').replace(/'/g, '&#39;') }" data-title="${m.nome}">${m.desc}</textarea>
-                                    <div class="mt-2 flex justify-end">
-                                        <button type="button" class="ver-desc-btn bg-secondary-500/20 hover:bg-secondary-500/40 text-secondary-300 text-sm px-3 py-1 rounded" data-description="${m.desc.replace(/\"/g, '&quot;').replace(/'/g, '&#39;')}" data-title="${m.nome}">Ver descrição</button>
+                                    <div class="mt-2 flex justify-between gap-2">
+                                        <button type="button" class="deletar-magia bg-red-500/20 hover:bg-red-500/40 text-red-300 text-sm px-3 py-1 rounded transition" data-idx="${fichaKael.magias.lista.indexOf(m)}" title="Deletar magia">🗑️ Deletar</button>
+                                        <button type="button" class="ver-desc-btn bg-secondary-500/20 hover:bg-secondary-500/40 text-secondary-300 text-sm px-3 py-1 rounded transition" data-description="${m.desc.replace(/\"/g, '&quot;').replace(/'/g, '&#39;')}" data-title="${m.nome}">Ver descrição</button>
                                     </div>
                                 </div>
                             `).join('') : '<div class="text-gray-500 italic text-sm">Nenhuma magia conhecida neste círculo.</div>'}
